@@ -1,0 +1,47 @@
+version: "3.8"
+services:
+  backend:
+    image: django-repo-structure:latest
+    container_name: "django-rest-application"
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - drf_service
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+
+  migration:
+    image: django-repo-structure:latest
+    container_name: "django-rest-migration"
+    command: python manage.py migrate
+    env_file:
+      - .env
+    networks:
+      - drf_service
+    depends_on:
+      backend_db:
+        condition: service_healthy
+
+  backend_db:
+    image: postgres:12
+    container_name: "postgres-db"
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - $PWD/service-database:/var/lib/postgresql/data
+    ports:
+      - "5430:5432"
+    networks:
+      - drf_service
+    healthcheck:
+        test: ["CMD", "pg_isready",  "-U", "${DB_USER}", "-d", "${DB_NAME}"]
+
+networks:
+  drf_service:
+    name: drf_network
