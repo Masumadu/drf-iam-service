@@ -1,9 +1,8 @@
 from typing import Union
 
 from django.db import DatabaseError
-from rest_framework import exceptions, status
+from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.views import exception_handler
 
 from .app_exceptions import AppExceptionCase
 
@@ -32,17 +31,11 @@ def custom_exception_handler(exc, context):
     raised the exception.
     :return: a response object.
     """
-
-    if isinstance(exc, exceptions.APIException):
-        return http_exception_handler(exc)
-
     if isinstance(exc, DatabaseError):
         return db_exception_handler(exc)
-
     if isinstance(exc, AppExceptionCase):
         return app_exception_handler(exc)
-
-    return exception_handler(exc, context)
+    return http_exception_handler(exc)
 
 
 def http_exception_handler(exc):
@@ -50,9 +43,13 @@ def http_exception_handler(exc):
     handle http exceptions raised by the application
     :param exc: the exception
     """
+    if hasattr(exc, "detail") and hasattr(exc, "status_code"):
+        message, status_code = exc.detail, exc.status_code
+    else:
+        message, status_code = str(exc), 500
     return Response(
-        data=exception_message(error_type="HttpException", message=exc.detail),
-        status=exc.status_code,
+        data=exception_message(error_type="HttpException", message=message),
+        status=status_code,
     )
 
 

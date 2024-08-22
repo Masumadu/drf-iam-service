@@ -119,15 +119,31 @@ def api_responses(status_codes: list, schema: Any):
         ),
     }
     for code in status_codes:
-        if not over_all_exceptions.get(code):
+        if over_all_exceptions.get(code):
+            responses[code] = over_all_exceptions.get(code)
+        elif isinstance(schema, dict):
+            responses[code] = OpenApiResponse(
+                description="successful response",
+                response=OpenApiTypes.OBJECT,
+                examples=[
+                    OpenApiExample(
+                        "Response",
+                        value=schema,
+                    ),
+                ],
+            )
+        else:
             responses[code] = OpenApiResponse(
                 description="successful response", response=schema
             )
-        else:
-            responses[code] = over_all_exceptions.get(code)
     return responses
 
 
 class CustomPageNumberPagination(PageNumberPagination):
     page_size_query_param = "page_size"
     max_page_size = 100
+
+
+def remove_none_fields(data: dict):
+    data = {key: value for key, value in data.items() if value not in ["", None]}
+    return data

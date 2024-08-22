@@ -1,0 +1,1 @@
+Dear {{ email }}, Your OTP is: {{ otp }}. Please do not share with anyone. Thank you!

@@ -1,14 +1,13 @@
 <div align="center">
-  <h1><b>DJANGO REST FRAMEWORK REPOSITORY DESIGN</b></h1>
-  <h4>A base repository design for building rest api for enterprise application using django rest framework</h4>
+  <h1><b>DJANGO REST FRAMEWORK USER IDENTITY AND ACCESS MANAGEMENT SERVICE</b></h1>
 </div>
 
 ## 📗 Table of Contents
 
 - [📖 About the Project](#about-project)
-  - Repository structure for building rest api using django rest framework.
+  - DRF microservice that provides Identity and Access Management for users.
     - [👀 Overview](#overview)
-      - The repository is already integrated with postgres.
+      - The repository is already integrated with postgres, redis, kafka and keycloak.
     - [🛠 Built With](#built-with)
       - Python
       - Poetry
@@ -18,6 +17,10 @@
         - Django
         - Django Rest Framework
         - Postgres
+        - Redis
+        - Kafka
+        - Docker
+        - Keycloak
       - [🔑 Key Features](#key-features)
         - Factory Design Pattern
         - Decorator Pattern
@@ -33,6 +36,9 @@
     - docker
     - docker-compose
     - git
+    - redis
+    - keycloak
+    - kafka
   - [⚓ Install](#setup)
     - install the various tools listed under prerequisite on your local machine
     - for instructions on how to install and set up these tools, please check their websites for directions
@@ -60,16 +66,19 @@
           2. start the application with command `python3 manage.py runserver`
     - with docker:
       - build the docker image
-        1. run command `docker build -t django-repo-structure:latest .`
+        1. run command `docker build -t drf-be-user-service:latest .`
       - start application with docker
         1. set variable `DB_HOST` in `.env` file to `backend_db`
-        2. run command to start application `docker-compose up`
+        2. set variable `REDIS_SERVER` in `.env` file to `redis`
+        3. set variable `KEYCLOAK_SERVER_URL` in `.env` file to `http://keycloak:8080`
+        4. set variable `KAFKA_BOOTSTRAP_SERVERS` in `.env` file to `kafka:9092`
+        5. run command to start application `docker-compose up`
   - [🕹️ Usage](#usage)
     - access application on http://localhost:8000/api/docs/
     - test endpoint from swagger documentation
   - [💯 Run tests](#run-tests)
     - To run the unit tests cases
-      1. run the  command `python3 manage.py test -v 2`
+      1. run the  command `python3 manage.py test --settings=config.settings.testing`
   - [🚀 Deployment](#triangular_flag_on_post-deployment)
     - TODO
 - [👥 Author](#author)

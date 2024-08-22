@@ -11,22 +11,28 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import ast
-from datetime import timedelta
+import os
 from pathlib import Path
 
 import environ
 
 env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-environ.Env.read_env(env_file=f"{BASE_DIR.parent}/.env")
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+environ.Env.read_env(env_file=f"{BASE_DIR}/.env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
-
+SMS_SENDER = env("SMS_SENDER")
+MASTER_OTP_CODES = env("MASTER_OTP_CODES").split("|")
+JWT_ALGORITHMS = ["HS256"]
+SUPER_ADMIN_USERNAME = env("SUPER_ADMIN_USERNAME")
+SUPER_ADMIN_EMAIL = env("SUPER_ADMIN_EMAIL")
+SUPER_ADMIN_PHONE = env("SUPER_ADMIN_PHONE")
+SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -40,7 +46,7 @@ LOGGING = {
     "loggers": {
         "root": {
             "level": "INFO",
-            "handlers": ["console_handler"],
+            "handlers": ["console_handler", "mail_admins"],
         },
         "django.request": {
             "handlers": ["error_file_handler", "console_handler", "mail_admins"],
@@ -108,12 +114,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # third party libraries
     "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
-    # local apps
-    "app.user.apps.UserConfig",
-    "app.todo.apps.TodoConfig",
+    "app.account.apps.AccountConfig",
 ]
 
 MIDDLEWARE = [
@@ -128,23 +130,12 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.app_exception_handler.custom_exception_handler",
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
-}
-
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Django REST API Repository Design",
-    "DESCRIPTION": "A repository structure for enterprise applications api design",
+    "TITLE": "User Identity Service Application",
+    "DESCRIPTION": "Backend Application That Integrates With Keycloak For Identity and Access Management",  # noqa
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "CONTACT": {
@@ -165,7 +156,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -191,8 +182,15 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
-        "TEST": {
-            "NAME": env("TEST_DB_NAME"),
+    }
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"redis://:{env('REDIS_PASSWORD')}@{env('REDIS_SERVER')}:{env('REDIS_PORT')}/0",  # noqa
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
 }
@@ -215,7 +213,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = "user.UserModel"
+AUTH_USER_MODEL = "account.AccountModel"
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
@@ -238,8 +237,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-SERVER_EMAIL = env("SERVER_EMAIL")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+SERVER_EMAIL = env("EMAIL_HOST_USER")
+DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER")
 ADMINS = [ast.literal_eval(admin) for admin in env("ADMINS").split("|")]
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
@@ -247,3 +246,18 @@ EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 EMAIL_USE_TLS = env("EMAIL_USE_TLS").lower() in ("true", "1", "t")
 EMAIL_USE_SSL = env("EMAIL_USE_SSL").lower() in ("true", "1", "t")
+
+# KEYCLOAK CONFIGURATION
+KEYCLOAK_SERVER_URL = env("KEYCLOAK_SERVER_URL")
+KEYCLOAK_REALM = env("KEYCLOAK_REALM")
+KEYCLOAK_CLIENT_ID = env("KEYCLOAK_CLIENT_ID")
+KEYCLOAK_CLIENT_SECRET = env("KEYCLOAK_CLIENT_SECRET")
+KEYCLOAK_ADMIN_USERNAME = env("KEYCLOAK_ADMIN_USERNAME")
+KEYCLOAK_ADMIN_PASSWORD = env("KEYCLOAK_ADMIN_PASSWORD")
+
+# KAFKA CONFIGURATION
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS")
+KAFKA_SERVER_USERNAME = env("KAFKA_SERVER_USERNAME")
+KAFKA_SERVER_PASSWORD = env("KAFKA_SERVER_PASSWORD")
+KAFKA_SMS_TOPIC = env("KAFKA_SMS_TOPIC")
+KAFKA_EMAIL_TOPIC = env("KAFKA_EMAIL_TOPIC")

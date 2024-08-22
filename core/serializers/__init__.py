@@ -1,1 +1,1 @@
-from .base_serializer import PaginatedSerializer
+from .base_serializer import EnumFieldSerializer, PaginatedSerializer
