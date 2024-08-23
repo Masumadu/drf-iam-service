@@ -99,17 +99,6 @@ class TestAccountView(AccountTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response_data, dict)
 
-    def test_verify_account_phone(self):
-        self.jwt_decode.return_value = self.mock_decode_token()
-        self.client.get(
-            f"{reverse('send_one_time_password')}?{urlencode({'phone': self.account_model.phone})}"  # noqa
-        )
-        response = self.client.get(
-            f"{reverse('verify_account_phone')}?{urlencode({'verification_code': self.random_number()})}",  # noqa
-            headers=self.headers,
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
     def test_generate_apikey(self):
         self.jwt_decode.return_value = self.mock_decode_token()
         response = self.client.get(reverse("generate_api_key"), headers=self.headers)
@@ -178,7 +167,7 @@ class TestAccountView(AccountTestCase):
 
     def test_reset_password_request(self):
         response = self.client.get(
-            f"{reverse('reset_password_request')}?{urlencode({'phone': self.account_model.phone})}",  # noqa
+            f"{reverse('reset_password_request')}?{urlencode({'email': self.account_model.email})}",  # noqa
         )
         response_data = response.json()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -188,7 +177,7 @@ class TestAccountView(AccountTestCase):
     def test_reset_password(self, mock_change_password):
         mock_change_password.return_value = self.mock_keycloak_auth.change_password()
         self.client.get(
-            f"{reverse('send_one_time_password')}?{urlencode({'phone': self.account_model.phone})}"  # noqa
+            f"{reverse('send_one_time_password')}?{urlencode({'email': self.account_model.email})}"  # noqa
         )
         otp = self.client.post(
             reverse("confirm_one_time_password"),
@@ -260,7 +249,7 @@ class TestAccountView(AccountTestCase):
 
     def test_send_one_time_password(self):
         response = self.client.get(
-            f"{reverse('send_one_time_password')}?{urlencode({'phone': self.account_model.phone})}"  # noqa
+            f"{reverse('send_one_time_password')}?{urlencode({'email': self.account_model.email})}"  # noqa
         )
 
         response_data = response.json()
@@ -269,7 +258,7 @@ class TestAccountView(AccountTestCase):
 
     def test_confirm_one_time_password(self):
         self.client.get(
-            f"{reverse('send_one_time_password')}?{urlencode({'phone': self.account_model.phone})}"  # noqa
+            f"{reverse('send_one_time_password')}?{urlencode({'email': self.account_model.email})}"  # noqa
         )
         response = self.client.post(
             reverse("confirm_one_time_password"),

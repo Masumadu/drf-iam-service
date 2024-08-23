@@ -14,12 +14,8 @@ from rest_framework.request import Request
 from core.constants import AccountStatusEnum, GroupEnum
 from core.exceptions import AppException
 from core.interfaces.notifications import Notifier
-from core.notifications import (
-    EmailNotificationHandler,
-    SMSNotificationHandler,
-)
+from core.notifications import EmailNotificationHandler
 from core.services import KeycloakAuthService
-from core.utils import remove_none_fields
 
 from .models import AccountModel
 from .repository import AccountRepository
@@ -70,7 +66,6 @@ class AccountController(Notifier):
             updated_account = self.account_repository.update_by_id(
                 obj_id=account.id, obj_data={"iam_provider_id": iam_account_id}
             )
-            self.send_otp(phone=account.phone)
             self.send_account_verification_link(
                 user_id=str(account.id),
                 url=verification_url,
@@ -127,21 +122,6 @@ class AccountController(Notifier):
             return payload
         except PyJWTError as exc:
             raise AppException.BadRequestException(error_message=exc.args) from exc
-
-    def verify_account_phone(self, request: Request):
-        account = self.account_repository.find_by_id(request.user.id)
-        otp_confirmation = self.confirm_otp(
-            account_id=str(account.id),
-            otp_code=request.query_params.get("verification_code"),
-        )
-        self._confirm_sec_code(
-            account_id=otp_confirmation.get("id"),
-            sec_code=otp_confirmation.get("sec_code"),
-        )
-        account = self.account_repository.update_by_id(
-            obj_id=account.id, obj_data={"is_phone_verified": True}
-        )
-        return AccountSerializer(account)
 
     def generate_account_apikey(self, request) -> dict:
         key = "".join(
@@ -220,11 +200,9 @@ class AccountController(Notifier):
             )
         raise AppException.ValidationException(error_message=serializer.errors)
 
-    def reset_account_password_request(self, email: str, phone: str):
-        account = self.account_repository.find(
-            remove_none_fields({"email": email, "phone": phone})
-        )
-        self.send_otp(phone=phone, email=email)
+    def reset_account_password_request(self, email: str):
+        account = self.account_repository.find({"email": email})
+        self.send_otp(email=email)
         return AccountSerializer(account)
 
     def reset_account_password(self, request: Request):
@@ -285,15 +263,9 @@ class AccountController(Notifier):
             )
         raise AppException.ValidationException(error_message=serializer.errors)
 
-    def send_otp(self, phone: str = None, email: str = None):
-        filter_param: dict = remove_none_fields({"email": email, "phone": phone})
-        if not filter_param:
-            raise AppException.BadRequestException(error_message="invalid otp channel")
-        account = self.account_repository.find(filter_param)
-        if phone:
-            self._sms_otp(account_id=str(account.id), phone_number=account.phone)
-        if email:
-            self._email_otp(account_id=str(account.id), email=account.email)
+    def send_otp(self, email: str):
+        account = self.account_repository.find({"email": email})
+        self._email_otp(account_id=str(account.id), email=account.email)
         return AccountSerializer(account)
 
     def otp_confirmation(self, request):
@@ -318,23 +290,6 @@ class AccountController(Notifier):
         )
         cache.delete(self.otp_code_key.format(account_id=account_id))
         return {"id": account_id, "sec_code": sec_code}
-
-    def _sms_otp(self, account_id: str, phone_number: str):
-        otp_code: str = self._generate_otp_code(length=6)
-        self._create_otp_record(
-            account_id=account_id, otp_code=otp_code, code_expiration=5
-        )
-        self._send_sms(
-            obj_data={
-                "phone": phone_number,
-                "template_name": "account_otp_code.txt",
-                "metadata": {
-                    "user_id": account_id,
-                    "otp": otp_code,
-                },
-            }
-        )
-        return None
 
     def _email_otp(self, account_id: str, email: str):
         otp_code: str = self._generate_otp_code(length=6)
@@ -405,16 +360,6 @@ class AccountController(Notifier):
                 "is_active": False,
                 "status": AccountStatusEnum.deactivated.value,
             },
-        )
-        return None
-
-    def _send_sms(self, obj_data: dict):
-        self.notify(
-            SMSNotificationHandler(
-                recipients=obj_data.get("phone"),
-                template_name=obj_data.get("template_name"),
-                metadata=obj_data.get("metadata"),
-            )
         )
         return None
 

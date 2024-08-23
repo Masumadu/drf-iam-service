@@ -1,6 +1,7 @@
 from typing import List, Union
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.template.exceptions import TemplateDoesNotExist
 from django.template.loader import render_to_string
 
@@ -27,7 +28,7 @@ class EmailNotificationHandler(NotificationInterface):
         Send the email notification.
         """
         data = {
-            "user_id": "alskdjfa",
+            "user_id": str(get_user_model().objects.filter(is_superuser=True).get().id),
             "sender": settings.SERVER_EMAIL,
             "subject": self.metadata.get("subject"),
             "recipients": self._recipients(),

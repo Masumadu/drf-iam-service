@@ -124,42 +124,6 @@ class TestAccountController(AccountTestCase):
         result = self.account_controller.verify_account_email(token=self.access_token)
         self.assertIsNone(result)
 
-    def test_verify_phone(self):
-        self.account_controller.send_otp(phone=self.account_model.phone)
-        request = Request(
-            self.request_factory.get(
-                self.request_url,
-                data={"verification_code": settings.MASTER_OTP_CODES[0]},
-            )
-        )
-        request.user = self.account_model
-        result = self.account_controller.verify_account_phone(request)
-        self.assertIsInstance(result, AccountSerializer)
-
-    def test_verify_phone_account_not_found(self):
-        with self.assertRaises(AppException.NotFoundException) as exception:
-            request = Request(
-                self.request_factory.get(
-                    self.request_url,
-                    data={"verification_code": settings.MASTER_OTP_CODES[0]},
-                )
-            )
-            self.account_controller.verify_account_phone(request)
-        self.assertEqual(exception.exception.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIsNotNone(exception.exception.error_message)
-
-    def test_verify_phone_invalid_otp(self):
-        with self.assertRaises(AppException.BadRequestException) as exception:
-            request = Request(
-                self.request_factory.get(
-                    self.request_url, data={"verification_code": "invalid"}
-                )
-            )
-            request.user = self.account_model
-            self.account_controller.verify_account_phone(request)
-        self.assertEqual(exception.exception.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIsNotNone(exception.exception.error_message)
-
     def test_generate_api_key(self):
         request = Request(self.request_factory.get(self.request_url))
         request.user = self.account_model
@@ -283,20 +247,20 @@ class TestAccountController(AccountTestCase):
 
     def test_reset_password_request(self):
         result = self.account_controller.reset_account_password_request(
-            email=self.account_model.email, phone=self.account_model.phone
+            email=self.account_model.email
         )
         self.assertIsInstance(result, AccountSerializer)
 
     def test_reset_password_request_notfound_exc(self):
         with self.assertRaises(AppException.NotFoundException) as exception:
             self.account_controller.reset_account_password_request(
-                email="invalid@example.com", phone=None
+                email="invalid@example.com"
             )
         self.assertEqual(exception.exception.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIsNotNone(exception.exception.error_message)
 
     def test_reset_password(self):
-        self.account_controller.send_otp(phone=self.account_model.phone)
+        self.account_controller.send_otp(email=self.account_model.email)
         otp_confirmation = self.account_controller.confirm_otp(
             account_id=self.account_model.id, otp_code=settings.MASTER_OTP_CODES[0]
         )
@@ -395,12 +359,6 @@ class TestAccountController(AccountTestCase):
     def test_send_otp(self):
         result = self.account_controller.send_otp(email=self.account_model.email)
         self.assertIsInstance(result, AccountSerializer)
-
-    def test_send_otp_invalid_channel(self):
-        with self.assertRaises(AppException.BadRequestException) as exception:
-            self.account_controller.send_otp()
-        self.assertEqual(exception.exception.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIsNotNone(exception.exception.error_message)
 
     def test_confirm_otp(self):
         request = Request(

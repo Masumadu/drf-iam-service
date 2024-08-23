@@ -78,7 +78,7 @@ def get_account(request):
 def create_account(request: Request):
     serializer = account_controller.create_account(
         request.data,
-        f"{request.scheme}://{request.get_host()}/account/{reverse('verify_account_email')}",
+        f"{request.scheme}://{request.get_host()}{reverse('verify_account_email')}",
     )
     return Response(data=serializer.data, status=201)
 
@@ -96,13 +96,8 @@ def verify_account_email(request: Request):
             request,
             "email/email_verification_success.html",
             {"email": result.email},
-            content_type="application/xhtml+xml",
         )
-    return render(
-        request,
-        "email/expired_email_verification.html",
-        content_type="application/xhtml+xml",
-    )
+    return render(request, "email/expired_email_verification.html")
 
 
 @extend_schema(
@@ -116,30 +111,8 @@ def verify_account_email(request: Request):
 def resend_email_verification(request: Request):
     serializer = account_controller.send_account_verification_link(
         request.user.id,
-        f"{request.scheme}://{request.get_host()}/account/{reverse('verify_account_email')}",
+        f"{request.scheme}://{request.get_host()}{reverse('verify_account_email')}",
     )
-    return Response(data=serializer.data, status=200)
-
-
-@extend_schema(
-    parameters=[
-        OpenApiParameter(
-            name="verification_code",
-            location=OpenApiParameter.QUERY,
-            description="otp code sent to user",
-            required=True,
-            type=str,
-        )
-    ],
-    responses=api_responses(
-        status_codes=[200, 400, 401, 404, 500], schema=AccountSerializer
-    ),
-    tags=api_doc_tag,
-)
-@api_view(http_method_names=["GET"])
-@authentication_classes([KeycloakAuthentication])
-def verify_account_phone(request: Request):
-    serializer = account_controller.verify_account_phone(request)
     return Response(data=serializer.data, status=200)
 
 
@@ -213,14 +186,7 @@ def refresh_access_token(request):
             description="account's email",
             required=False,
             type=str,
-        ),
-        OpenApiParameter(
-            name="phone",
-            location=OpenApiParameter.QUERY,
-            description="account's phone number",
-            required=False,
-            type=str,
-        ),
+        )
     ],
     responses=api_responses(
         status_codes=[200, 400, 404, 422, 500], schema=AccountSerializer
@@ -231,7 +197,7 @@ def refresh_access_token(request):
 @api_view(http_method_names=["GET"])
 def reset_password_request(request: Request):
     serializer = account_controller.reset_account_password_request(
-        email=request.query_params.get("email"), phone=request.query_params.get("phone")
+        email=request.query_params.get("email")
     )
     return Response(data=serializer.data, status=200)
 
@@ -272,14 +238,7 @@ def change_password(request):
             description="email to receive otp on",
             required=False,
             type=str,
-        ),
-        OpenApiParameter(
-            name="phone",
-            location=OpenApiParameter.QUERY,
-            description="phone to receive otp on",
-            required=False,
-            type=str,
-        ),
+        )
     ],
     responses=api_responses(
         status_codes=[200, 400, 404, 500], schema=AccountSerializer
@@ -289,9 +248,7 @@ def change_password(request):
 )
 @api_view(http_method_names=["GET"])
 def send_one_time_password(request: Request):
-    serializer = account_controller.send_otp(
-        email=request.query_params.get("email"), phone=request.query_params.get("phone")
-    )
+    serializer = account_controller.send_otp(email=request.query_params.get("email"))
     return Response(data=serializer.data, status=200)
 
 

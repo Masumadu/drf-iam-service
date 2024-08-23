@@ -12,7 +12,6 @@ urlpatterns = [
         views.resend_email_verification,
         name="resend_email_verification",
     ),
-    path("verify/phone/", views.verify_account_phone, name="verify_account_phone"),
     path("apikey/", views.generate_apikey, name="generate_api_key"),
     path(
         "apikey/<str:apikey>/detail/",
