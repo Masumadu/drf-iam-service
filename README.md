@@ -6,6 +6,7 @@
 
 - [📖 About the Project](#about-project)
   - DRF microservice that provides Identity and Access Management for users.
+  - This microservice works together with https://github.com/Masumadu/drf-email-service to provide an email notification service.
     - [👀 Overview](#overview)
       - The repository is already integrated with postgres, redis, kafka and keycloak.
     - [🛠 Built With](#built-with)
